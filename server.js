@@ -4,11 +4,13 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const app = express();
-const PORT = 3000;
 
-// Fix for __dirname in ES modules
+// Fix __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Render requires dynamic port
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.json());
@@ -18,47 +20,66 @@ app.use(express.static(path.join(__dirname, "public")));
 const BASE_URL =
   "https://bid.callgrid.com/api/ping/cmmw7umjt010h07licbksivxn";
 
-// API endpoint
+// Health check route (useful for testing)
+app.get("/test", (req, res) => {
+  res.send("✅ Server is working");
+});
+
+// API route
 app.post("/api/ping", async (req, res) => {
   try {
     const { callerId } = req.body;
 
-    if (!callerId) {
+    // Validation
+    if (!callerId || typeof callerId !== "string") {
       return res.status(400).json({
         success: false,
-        error: "callerId is required",
+        error: "Valid callerId is required",
       });
     }
 
+    // Build external API URL
     const url = `${BASE_URL}?CallerId=${encodeURIComponent(callerId)}`;
 
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      method: "GET",
+      timeout: 10000,
+    });
 
     if (!response.ok) {
-      throw new Error(`External API error: ${response.status}`);
+      return res.status(response.status).json({
+        success: false,
+        error: `External API error: ${response.status}`,
+      });
     }
 
     const data = await response.json();
 
-    res.json({
+    return res.json({
       success: true,
       data,
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
+  } catch (error) {
+    console.error("API Error:", error);
+
+    return res.status(500).json({
       success: false,
-      error: err.message,
+      error: "Internal server error",
     });
   }
 });
 
-// Serve frontend
+// Root route (VERY IMPORTANT for Render)
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
+// Catch-all for unknown routes (prevents ugly crashes)
+app.use((req, res) => {
+  res.status(404).send("404 Not Found");
+});
+
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
