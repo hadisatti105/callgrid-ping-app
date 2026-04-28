@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CallGrid Ping</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #f5f7fb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      font-size: 24px;
+      text-align: center;
+    }
+
+    label {
+      font-size: 14px;
+      margin-bottom: 5px;
+      display: block;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    input:focus {
+      border-color: #007bff;
+      outline: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      background: #007bff;
+      color: white;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    .result {
+      margin-top: 20px;
+      background: #f1f3f6;
+      padding: 15px;
+      border-radius: 6px;
+      font-size: 13px;
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .loading {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>CallGrid Ping</h1>
+
+    <label for="callerId">Caller ID</label>
+    <input
+      type="text"
+      id="callerId"
+      placeholder="Enter phone number (e.g. 5551234567)"
+    />
+
+    <button onclick="sendPing()">Submit</button>
+
+    <div class="loading" id="loading"></div>
+
+    <div class="result" id="result">Response will appear here...</div>
+  </div>
+
+  <script>
+    async function sendPing() {
+      const callerId = document.getElementById("callerId").value;
+      const resultBox = document.getElementById("result");
+      const loading = document.getElementById("loading");
+
+      if (!callerId) {
+        alert("Please enter a Caller ID");
+        return;
+      }
+
+      resultBox.textContent = "";
+      loading.textContent = "Loading...";
+
+      try {
+        const response = await fetch("/api/ping", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ callerId })
+        });
+
+        const data = await response.json();
+
+        resultBox.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        resultBox.textContent = "Error: " + error.message;
+      } finally {
+        loading.textContent = "";
+      }
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "callgrid-ping-app",
+  "version": "1.0.0",
+  "description": "CallGrid Ping API Demo",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-fetch": "^3.3.2"
+  }
+}
