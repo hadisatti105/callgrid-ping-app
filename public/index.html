@@ -3,134 +3,158 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>CallGrid Ping</title>
+  <title>CallGrid Ping Dashboard</title>
 
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: Arial, sans-serif;
-    }
-
     body {
-      background: #f5f7fb;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #eef2f7, #d9e4f5);
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
+      margin: 0;
     }
 
     .container {
-      background: #ffffff;
-      padding: 30px;
-      border-radius: 10px;
-      width: 100%;
-      max-width: 500px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      width: 420px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     }
 
     h1 {
-      margin-bottom: 20px;
-      font-size: 24px;
       text-align: center;
-    }
-
-    label {
-      font-size: 14px;
-      margin-bottom: 5px;
-      display: block;
+      font-size: 22px;
+      margin-bottom: 20px;
+      color: #333;
     }
 
     input {
       width: 100%;
       padding: 12px;
-      margin-bottom: 15px;
+      border-radius: 8px;
       border: 1px solid #ccc;
-      border-radius: 6px;
+      outline: none;
       font-size: 14px;
     }
 
     input:focus {
       border-color: #007bff;
-      outline: none;
     }
 
     button {
       width: 100%;
       padding: 12px;
-      border: none;
-      border-radius: 6px;
-      font-size: 16px;
-      cursor: pointer;
+      margin-top: 12px;
       background: #007bff;
       color: white;
-      transition: background 0.3s ease;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+      transition: 0.2s;
     }
 
     button:hover {
       background: #0056b3;
     }
 
-    .result {
+    .card {
       margin-top: 20px;
-      background: #f1f3f6;
+      background: #f8fafc;
       padding: 15px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .row {
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .label {
+      font-weight: bold;
+      color: #555;
+    }
+
+    .value {
+      margin-top: 3px;
+      color: #222;
+    }
+
+    .status {
+      font-weight: bold;
+      padding: 4px 10px;
       border-radius: 6px;
-      font-size: 13px;
-      white-space: pre-wrap;
-      max-height: 200px;
-      overflow-y: auto;
+      display: inline-block;
+    }
+
+    .yes {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .no {
+      background: #fee2e2;
+      color: #991b1b;
     }
 
     .loading {
       text-align: center;
       margin-top: 10px;
-      font-size: 14px;
+      color: #555;
     }
 
-    @media (max-width: 600px) {
+    .error {
+      color: red;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 500px) {
       .container {
-        padding: 20px;
+        width: 90%;
       }
     }
   </style>
 </head>
+
 <body>
 
   <div class="container">
-    <h1>CallGrid Ping</h1>
+    <h1>📞 CallGrid Ping</h1>
 
-    <label for="callerId">Caller ID</label>
-    <input
-      type="text"
-      id="callerId"
-      placeholder="Enter phone number (e.g. 5551234567)"
-    />
+    <input id="callerId" placeholder="Enter Caller ID (e.g. 5551234567)" />
 
-    <button onclick="sendPing()">Submit</button>
+    <button onclick="sendPing()">Check Availability</button>
 
-    <div class="loading" id="loading"></div>
+    <div id="loading" class="loading"></div>
+    <div id="error" class="error"></div>
 
-    <div class="result" id="result">Response will appear here...</div>
+    <div id="result"></div>
   </div>
 
   <script>
     async function sendPing() {
-      const callerId = document.getElementById("callerId").value;
-      const resultBox = document.getElementById("result");
+      const callerId = document.getElementById("callerId").value.trim();
+      const result = document.getElementById("result");
       const loading = document.getElementById("loading");
+      const error = document.getElementById("error");
+
+      result.innerHTML = "";
+      error.textContent = "";
 
       if (!callerId) {
-        alert("Please enter a Caller ID");
+        error.textContent = "Please enter a Caller ID";
         return;
       }
 
-      resultBox.textContent = "";
-      loading.textContent = "Loading...";
+      loading.textContent = "Checking...";
 
       try {
-        const response = await fetch("/api/ping", {
+        const res = await fetch("/api/ping", {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
@@ -138,11 +162,51 @@
           body: JSON.stringify({ callerId })
         });
 
-        const data = await response.json();
+        const text = await res.text();
 
-        resultBox.textContent = JSON.stringify(data, null, 2);
-      } catch (error) {
-        resultBox.textContent = "Error: " + error.message;
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error("Server returned invalid response: " + text);
+        }
+
+        if (!data.success) {
+          throw new Error(data.error || "Request failed");
+        }
+
+        const d = data.data;
+
+        result.innerHTML = `
+          <div class="card">
+            <div class="row">
+              <div class="label">Request ID</div>
+              <div class="value">${d.id}</div>
+            </div>
+
+            <div class="row">
+              <div class="label">Phone Number</div>
+              <div class="value">${d.phoneNumber}</div>
+            </div>
+
+            <div class="row">
+              <div class="label">Status Code</div>
+              <div class="value">${d.code}</div>
+            </div>
+
+            <div class="row">
+              <div class="label">Available</div>
+              <div class="value">
+                <span class="status ${d.available ? "yes" : "no"}">
+                  ${d.available ? "YES ✅" : "NO ❌"}
+                </span>
+              </div>
+            </div>
+          </div>
+        `;
+
+      } catch (err) {
+        error.textContent = err.message;
       } finally {
         loading.textContent = "";
       }

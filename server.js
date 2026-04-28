@@ -5,24 +5,24 @@ import { fileURLToPath } from "url";
 
 const app = express();
 
-// Fix __dirname for ES modules
+// Fix __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Render requires dynamic port
+// Render port
 const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// CallGrid API base URL
+// CallGrid API
 const BASE_URL =
   "https://bid.callgrid.com/api/ping/cmmw7umjt010h07licbksivxn";
 
-// Health check route (useful for testing)
+// Health check
 app.get("/test", (req, res) => {
-  res.send("✅ Server is working");
+  res.json({ success: true, message: "Server is working" });
 });
 
 // API route
@@ -30,37 +30,37 @@ app.post("/api/ping", async (req, res) => {
   try {
     const { callerId } = req.body;
 
-    // Validation
-    if (!callerId || typeof callerId !== "string") {
+    if (!callerId) {
       return res.status(400).json({
         success: false,
-        error: "Valid callerId is required",
+        error: "callerId is required",
       });
     }
 
-    // Build external API URL
     const url = `${BASE_URL}?CallerId=${encodeURIComponent(callerId)}`;
 
-    const response = await fetch(url, {
-      method: "GET",
-      timeout: 10000,
-    });
+    const response = await fetch(url);
 
-    if (!response.ok) {
-      return res.status(response.status).json({
+    const text = await response.text();
+
+    // Ensure JSON response
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return res.status(500).json({
         success: false,
-        error: `External API error: ${response.status}`,
+        error: "Invalid response from external API",
+        raw: text
       });
     }
-
-    const data = await response.json();
 
     return res.json({
       success: true,
       data,
     });
   } catch (error) {
-    console.error("API Error:", error);
+    console.error("ERROR:", error);
 
     return res.status(500).json({
       success: false,
@@ -69,14 +69,17 @@ app.post("/api/ping", async (req, res) => {
   }
 });
 
-// Root route (VERY IMPORTANT for Render)
+// Serve frontend
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// Catch-all for unknown routes (prevents ugly crashes)
+// JSON 404 (IMPORTANT FIX)
 app.use((req, res) => {
-  res.status(404).send("404 Not Found");
+  res.status(404).json({
+    success: false,
+    error: "Route not found",
+  });
 });
 
 // Start server

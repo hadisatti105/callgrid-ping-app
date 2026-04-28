@@ -1,7 +1,7 @@
 {
   "name": "callgrid-ping-app",
   "version": "1.0.0",
-  "description": "CallGrid Ping API Demo",
+  "description": "CallGrid Ping API App",
   "main": "server.js",
   "type": "module",
   "scripts": {
